@@ -1,8 +1,7 @@
 from datetime import datetime
 from flask import current_app
-from app.models.settings import AppSetting
-from app import db
-from utils.g_auth import GoogleAuthManager
+from models.models import AppSetting , db
+# from utils.g_auth import GoogleAuthManager
 
 class GoogleAuthManager:
     _cache = {}

@@ -3,20 +3,20 @@ from urllib.parse import urlencode
 import requests
 from models.models import RegisteredApp, OAuthSession, db
 from utils.hash import create_bridge_token, create_jwt_token, verify_jwt_token
-from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from datetime import datetime
-from utils.g_auth import GoogleAuthManager
+from routes.setting import get_setting_value
 
-credentials = GoogleAuthManager.get_credentials()
-google_oauth_bp = Blueprint("google_oauth", __name__)
+
+g_oauth = Blueprint("google_oauth", __name__, url_prefix="/google_oauth")
+
 limiter = Limiter(key_func=get_remote_address)
 
 # -------------------------------------------------------------
 # STEP 1 — Redirect to Google
 # -------------------------------------------------------------
-@google_oauth_bp.route("/login")
+@g_oauth.route("/login")
 @limiter.limit("5 per minute")
 def auth_login():
     client_id = request.args.get("client_id")
@@ -24,14 +24,22 @@ def auth_login():
     if not client_id or not redirect_url:
         return jsonify({"error": "client_id and redirect_url required"}), 400
 
-    reg = RegisteredApp.query.filter_by(client_id=client_id, is_active=True).first()
+    reg = RegisteredApp.query.filter_by(client_id=client_id, is_active=True).first()    
     if not reg or redirect_url != reg.redirect_url:
         return jsonify({"error": "unauthorized client"}), 403
 
     session["bridge_client_id"] = client_id
 
+    print('adasdas')
+    GOOGLE_CLIENT_ID = get_setting_value("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = get_setting_value("GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI = get_setting_value("GOOGLE_REDIRECT_URI")
+
+    if not GOOGLE_CLIENT_ID or not GOOGLE_REDIRECT_URI:
+        return jsonify({"error": "Google OAuth settings not configured"}), 500
+
     params = {
-        "client_id": GOOGLE_CLIENT_ID,
+        "client_id": GOOGLE_CLIENT_ID,        
         "redirect_uri": GOOGLE_REDIRECT_URI,
         "response_type": "code",
         "scope": "openid email profile",
@@ -44,7 +52,7 @@ def auth_login():
 # -------------------------------------------------------------
 # STEP 2 — Handle Google Callback
 # -------------------------------------------------------------
-@google_oauth_bp.route("/callback")
+@g_oauth.route("/callback")
 def auth_callback():
     from google.oauth2 import id_token
     from google.auth.transport import requests as google_requests
@@ -61,6 +69,11 @@ def auth_callback():
     if not reg:
         return jsonify({"error": "unauthorized client"}), 403
 
+    
+    GOOGLE_CLIENT_ID = get_setting_value("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = get_setting_value("GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI = get_setting_value("GOOGLE_REDIRECT_URI")
+    
     token_res = requests.post(
         "https://oauth2.googleapis.com/token",
         data={
@@ -109,7 +122,7 @@ def auth_callback():
 # -------------------------------------------------------------
 # STEP 3 — Verify Token (for Django / CI)
 # -------------------------------------------------------------
-@google_oauth_bp.route("/verify", methods=["POST"])
+@g_oauth.route("/verify", methods=["POST"])
 def auth_verify():
     token = request.json.get("token")
     if not token:

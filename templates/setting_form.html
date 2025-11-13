@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ action }} Setting</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <h2 class="mb-4">{{ action }} Setting</h2>
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Key</label>
+            <input type="text" class="form-control" name="key" value="{{ setting.key if setting else '' }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Value</label>
+            <textarea class="form-control" name="value" rows="3">{{ setting.value if setting else '' }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <input type="text" class="form-control" name="description" value="{{ setting.description if setting else '' }}">
+        </div>
+        <button type="submit" class="btn btn-success">{{ action }}</button>
+        <a href="{{ url_for('setting.settings') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+</body>
+</html>
